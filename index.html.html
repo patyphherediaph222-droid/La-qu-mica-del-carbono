@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exploradores del Carbono: Alcanos y Alquenos en Cáscaras y Tubérculos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Three.js for 3D Molecule Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                            950: '#052e16'
+                        },
+                        citrus: {
+                            100: '#fef9c3',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .tab-btn.active {
+            border-bottom: 4px solid #16a34a;
+            color: #15803d;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .chem-font {
+            font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 0.5px;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0, 1, 0, 1), opacity 0.3s ease-out;
+            opacity: 0;
+        }
+        .accordion-content.open {
+            max-height: 3000px;
+            opacity: 1;
+            transition: max-height 0.5s ease-in, opacity 0.4s ease-in;
+        }
+        .mol-view-btn.active {
+            background-color: #16a34a;
+            color: white;
+            border-color: #16a34a;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-slate-800 font-sans min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <!-- Encabezado de la Aplicación -->
+    <header class="bg-gradient-to-r from-brand-950 via-brand-900 to-emerald-900 text-white shadow-xl sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col lg:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/20 shadow-inner">
+                        <i class="fa-solid fa-atom text-citrus-400 text-3xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-display font-extrabold text-2xl md:text-3xl tracking-tight text-white flex items-center gap-2">
+                            Exploradores del Carbono
+                            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-citrus-400 text-brand-950 uppercase">Didáctico</span>
+                        </h1>
+                        <p class="text-xs md:text-sm text-brand-100 font-medium">
+                            Alcanos y Alquenos en Cáscaras Frutales y Tubérculos · Propuesta Educativa con IA
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Buscador Rápido -->
+                <div class="w-full lg:w-80 flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 focus-within:ring-2 focus-within:ring-citrus-400 shadow-inner">
+                    <i class="fa-solid fa-magnifying-glass text-brand-200 mr-2"></i>
+                    <input type="text" id="searchInput" onkeyup="filterAll()" placeholder="Buscar fruta o molécula..." class="bg-transparent text-white placeholder-brand-200 text-sm focus:outline-none w-full">
+                </div>
+            </div>
+        </div>
+
+        <!-- Pestañas Principales / Carpetas -->
+        <div class="bg-brand-950/60 border-t border-white/10 backdrop-blur-md">
+            <div class="max-w-7xl mx-auto px-4 flex justify-center sm:justify-start gap-2 overflow-x-auto">
+                <button onclick="switchTab('alcanos')" id="tab-alcanos" class="tab-btn active px-6 py-3.5 font-display font-bold text-sm md:text-base flex items-center gap-2 transition-all duration-200 text-slate-800 rounded-t-2xl mt-1">
+                    <i class="fa-solid fa-robot text-brand-600"></i>
+                    <span>Cazando Alcanos con IA</span>
+                </button>
+                <button onclick="switchTab('alquenos')" id="tab-alquenos" class="tab-btn px-6 py-3.5 font-display font-bold text-sm md:text-base flex items-center gap-2 transition-all duration-200 text-slate-300 hover:text-white rounded-t-2xl mt-1">
+                    <i class="fa-solid fa-seedling text-citrus-400"></i>
+                    <span>Alquenos en las Cáscaras</span>
+                </button>
+                <button onclick="switchTab('visor3d')" id="tab-visor3d" class="tab-btn px-6 py-3.5 font-display font-bold text-sm md:text-base flex items-center gap-2 transition-all duration-200 text-slate-300 hover:text-white rounded-t-2xl mt-1">
+                    <i class="fa-solid fa-cubes text-emerald-400"></i>
+                    <span>Visor Molecular 3D y Notaciones</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+
+        <!-- ======================================================== -->
+        <!-- PESTAÑA 1: CAZANDO ALCANOS CON IA                         -->
+        <!-- ======================================================== -->
+        <section id="content-alcanos" class="space-y-8">
+
+            <!-- Banner Informativo -->
+            <div class="bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 border border-brand-200 rounded-3xl p-6 md:p-8 shadow-sm">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+                    <div class="lg:col-span-2 space-y-4">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-700 text-white font-bold text-xs rounded-full uppercase tracking-wider">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i> Pregunta de Investigación
+                        </span>
+                        <h2 class="font-display font-extrabold text-2xl md:text-3xl text-brand-950">
+                            ¿Qué alcanos se han identificado en la superficie cerosa o en los extractos volátiles de las cáscaras?
+                        </h2>
+                        <p class="text-slate-700 leading-relaxed text-sm md:text-base">
+                            No todos los estudios informan los mismos compuestos. Las plantas sintetizan mezclas de <strong>alcanos lineales (n-alcanos) y ramificados</strong> como barrera protectora cuticular. Explora a continuación los hallazgos reportados en las investigaciones científicas compartidas.
+                        </p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-md border border-brand-200 text-xs space-y-2">
+                        <h4 class="font-bold text-brand-900 text-sm border-b pb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-info text-citrus-500"></i> Resumen de Alcanos Encontrados
+                        </h4>
+                        <ul class="space-y-1.5 text-slate-600">
+                            <li><strong class="text-slate-800">Papaya:</strong> Octano, Decano, Undecano, Hexadecano, 4,5-dimetiloctano, etc.</li>
+                            <li><strong class="text-slate-800">Piña:</strong> 4-metiloctano, Nonano, Hexacosano.</li>
+                            <li><strong class="text-slate-800">Banana:</strong> n-pentacosano (C₂₅H₅₂).</li>
+                            <li><strong class="text-slate-800">Naranja:</strong> Heptacosano (C₂₇H₅₆), Nonacosano (C₂₉H₆₀).</li>
+                            <li><strong class="text-slate-800">Papa:</strong> Octadecano, Tetracosano, Hexadecano.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fichas de Frutas con Alcanos -->
+            <div class="space-y-4">
+                <h3 class="font-display font-bold text-xl md:text-2xl text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-cubes-stacked text-brand-600"></i>
+                    Perfiles de Alcanos por Fruta y Tubérculo
+                </h3>
+
+                <!-- Card Papaya -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="papaya" data-type="alcanos">
+                    <div onclick="toggleAccordion('acc-alcanos-papaya')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-emerald-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🍈</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Papaya (Carica papaya)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Lineales y Ramificados</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alcanos-papaya" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alcanos-papaya" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                En el material bibliográfico aparecen alcanos lineales volátiles como <strong>octano, decano, undecano y hexadecano</strong>, además de alcanos ramificados como <strong>4,5-dimetiloctano, 2,4-dimetildecano y 4,7-dimetilundecano</strong>.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">Octano (C₈H₁₈)</div>
+                                    <div class="text-xs text-slate-500">Lineal · Volátil</div>
+                                    <button onclick="openMoleculeInViewer('octano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">4,5-dimetiloctano (C₁₀H₂₂)</div>
+                                    <div class="text-xs text-slate-500">Ramificado</div>
+                                    <button onclick="openMoleculeInViewer('4_5_dimetiloctano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">4,7-dimetilundecano (C₁₃H₂₈)</div>
+                                    <div class="text-xs text-slate-500">Ramificado</div>
+                                    <button onclick="openMoleculeInViewer('4_7_dimetilundecano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Piña -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="pina" data-type="alcanos">
+                    <div onclick="toggleAccordion('acc-alcanos-pina')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-emerald-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🍍</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Piña (Ananas comosus)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">Ramificados y Lineales</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alcanos-pina" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alcanos-pina" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                Se reportó puntualmente <strong>4-metiloctano</strong>, un alcano ramificado. En los análisis bibliográficos compartidos también destacan <strong>nonano</strong> (C₉H₂₀) y <strong>hexacosano</strong> (C₂₆H₅₄). Otros análisis pueden presentar perfiles distintos.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">4-metiloctano (C₉H₂₀)</div>
+                                    <div class="text-xs text-slate-500">Alcano Ramificado</div>
+                                    <button onclick="openMoleculeInViewer('4_metiloctano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">Nonano (C₉H₂₀)</div>
+                                    <div class="text-xs text-slate-500">Alcano Lineal</div>
+                                    <button onclick="openMoleculeInViewer('nonano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">Hexacosano (C₂₆H₅₄)</div>
+                                    <div class="text-xs text-slate-500">Cadena Larga</div>
+                                    <button onclick="openMoleculeInViewer('hexacosano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Banana -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="banana" data-type="alcanos">
+                    <div onclick="toggleAccordion('acc-alcanos-banana')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-emerald-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🍌</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Banana / Plátano (Musa paradisiaca)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-bold">Cadena Larga Cuticular</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alcanos-banana" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alcanos-banana" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                En la cera cuticular protectora se describen n-alcanos de cadena larga. El material de respaldo menciona como ejemplo principal el <strong>n-pentacosano (C₂₅H₅₂)</strong>.
+                            </p>
+                            <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 max-w-sm">
+                                <div class="font-bold text-brand-800">n-pentacosano (C₂₅H₅₂)</div>
+                                <div class="text-xs text-slate-500">Cera impermeable de 25 carbonos</div>
+                                <button onclick="openMoleculeInViewer('n_pentacosano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Naranja -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="naranja" data-type="alcanos">
+                    <div onclick="toggleAccordion('acc-alcanos-naranja')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-emerald-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🍊</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Naranja (Citrus sinensis)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 font-bold">Cera Cuticular C27-C29</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alcanos-naranja" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alcanos-naranja" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                Las ceras superficiales de los cítricos contienen alcanos de cadena muy larga. Se destacan el <strong>Heptacosano (C₂₇H₅₆)</strong> y el <strong>Nonacosano (C₂₉H₆₀)</strong>.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">Heptacosano (C₂₇H₅₆)</div>
+                                    <button onclick="openMoleculeInViewer('heptacosano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">Nonacosano (C₂₉H₆₀)</div>
+                                    <button onclick="openMoleculeInViewer('nonacosano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Papa -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="papa" data-type="alcanos">
+                    <div onclick="toggleAccordion('acc-alcanos-papa')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-emerald-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🥔</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Papa (Solanum tuberosum)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-800 font-bold">Tubérculo (Material de Comparación)</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alcanos-papa" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alcanos-papa" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                En la piel de la papa (que es un tubérculo subterráneo, no una fruta) se han reportado alcanos como <strong>hexadecano, octadecano (C₁₈H₃₈) y tetracosano (C₂₄H₅₀)</strong>.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md">
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">Octadecano (C₁₈H₃₈)</div>
+                                    <button onclick="openMoleculeInViewer('octadecano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-brand-800">Tetracosano (C₂₄H₅₀)</div>
+                                    <button onclick="openMoleculeInViewer('tetracosano')" class="mt-2 text-xs text-brand-600 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Mango / Manzana -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl p-5 shadow-sm">
+                    <div class="flex items-center gap-4">
+                        <span class="text-3xl">🥭 🍎</span>
+                        <div>
+                            <h4 class="font-display font-bold text-base text-slate-800">Mango y Manzana</h4>
+                            <p class="text-xs text-slate-500">En los perfiles analíticos no se destacan alcanos como grupo principal; pueden aparecer mezclas secundarias complejas.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- PESTAÑA 2: ALQUENOS Y TERPENOS EN LAS CÁSCARAS           -->
+        <!-- ======================================================== -->
+        <section id="content-alquenos" class="space-y-8 hidden">
+
+            <!-- Banner Informativo -->
+            <div class="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border border-amber-200 rounded-3xl p-6 md:p-8 shadow-sm">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+                    <div class="lg:col-span-2 space-y-4">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-700 text-white font-bold text-xs rounded-full uppercase tracking-wider">
+                            <i class="fa-solid fa-link"></i> Dobles Enlaces C=C
+                        </span>
+                        <h2 class="font-display font-extrabold text-2xl md:text-3xl text-amber-950">
+                            Alquenos Sencillos vs. Terpenos Insaturados
+                        </h2>
+                        <p class="text-slate-700 leading-relaxed text-sm md:text-base">
+                            <strong>Idea clave:</strong> El <strong>eteno (etileno)</strong> es un alqueno acíclico sencillo de 2 carbonos que actúa como hormona vegetal. Por otro lado, compuestos como el <strong>limoneno, α-pineno, β-mirceno, 3-careno y α-farneseno</strong> son <em>terpenos insaturados</em> de estructuras cíclicas o ramificadas complejas responsables del aroma y defensa.
+                        </p>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl shadow-md border border-amber-200 text-xs space-y-2">
+                        <h4 class="font-bold text-amber-900 text-sm border-b pb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-cubes text-amber-500"></i> Clasificación Rápida
+                        </h4>
+                        <ul class="space-y-1 text-slate-600">
+                            <li><strong class="text-slate-800">Alqueno Lineal Gaseoso:</strong> Eteno ($C_2H_4$)</li>
+                            <li><strong class="text-slate-800">Terpenos Cíclicos:</strong> Limoneno, α-pineno, 3-careno</li>
+                            <li><strong class="text-slate-800">Terpenos Acíclicos Ramificados:</strong> β-mirceno, α-farneseno</li>
+                            <li><strong class="text-slate-800">Alquenos Lineales en Papa/Piña:</strong> 1-undeceno, 1-trideceno, 1-hexadeceno</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fichas de Frutas con Alquenos -->
+            <div class="space-y-4">
+                <h3 class="font-display font-bold text-xl md:text-2xl text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-lemon text-amber-500"></i>
+                    Compuestos Alquénicos por Fruta y Tubérculo
+                </h3>
+
+                <!-- Banana -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="banana" data-type="alquenos">
+                    <div onclick="toggleAccordion('acc-alquenos-banana')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-amber-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🍌</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Banana (Eteno / Etileno)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">Fitohormona Gaseosa</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alquenos-banana" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alquenos-banana" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                <strong>Eteno o etileno (C₂H₄):</strong> Es una hormona vegetal gaseosa que coordina la maduración. Se produce en todo el fruto; es una precisión científica importante no afirmar que se encuentra exclusivamente en la cáscara.
+                            </p>
+                            <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 max-w-sm">
+                                <div class="font-bold text-amber-900">Eteno (C₂H₄)</div>
+                                <div class="text-xs text-slate-500">CH₂=CH₂ · Doble Enlace C=C</div>
+                                <button onclick="openMoleculeInViewer('eteno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Naranja -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="naranja" data-type="alquenos">
+                    <div onclick="toggleAccordion('acc-alquenos-naranja')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-amber-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🍊</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Naranja y Cítricos</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 font-bold">D-Limoneno Mayoritario</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alquenos-naranja" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alquenos-naranja" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                El <strong>limoneno</strong> suele ser el componente mayoritario del aceite esencial de las vesículas de la cáscara. También se reportan terpenos como <strong>α-pineno, β-mirceno, sabineno y γ-terpineno</strong>.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-amber-900">Limoneno (C₁₀H₁₆)</div>
+                                    <button onclick="openMoleculeInViewer('limoneno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-amber-900">α-pineno (C₁₀H₁₆)</div>
+                                    <button onclick="openMoleculeInViewer('alpha_pineno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-amber-900">β-mirceno (C₁₀H₁₆)</div>
+                                    <button onclick="openMoleculeInViewer('beta_mirceno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mango -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="mango" data-type="alquenos">
+                    <div onclick="toggleAccordion('acc-alquenos-mango')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-amber-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🥭</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Mango (Cáscara y Volátiles)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-bold">Mezcla Terpénica Aromática</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alquenos-mango" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alquenos-mango" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                Compuestos como <strong>3-careno, α-pineno, limoneno y β-mirceno</strong> aparecen ampliamente en perfiles de volátiles de la cáscara del mango, otorgándole su fragancia resinoso-característica.
+                            </p>
+                            <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 max-w-sm">
+                                <div class="font-bold text-amber-900">3-careno (C₁₀H₁₆)</div>
+                                <div class="text-xs text-slate-500">Terpeno Cíclico</div>
+                                <button onclick="openMoleculeInViewer('tres_careno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manzana -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="manzana" data-type="alquenos">
+                    <div onclick="toggleAccordion('acc-alquenos-manzana')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-amber-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🍎</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Manzana (Superficie y Cera)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 font-bold">Sesquiterpeno Acíclico</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alquenos-manzana" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alquenos-manzana" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                El <strong>α-farneseno (C₁₅H₂₄)</strong> se ha reportado ampliamente en la cutícula de las manzanas. Es un sesquiterpeno insaturado acíclico cuya oxidación produce la mancha marrón cuticular.
+                            </p>
+                            <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 max-w-sm">
+                                <div class="font-bold text-amber-900">α-farneseno (C₁₅H₂₄)</div>
+                                <button onclick="openMoleculeInViewer('alpha_farneseno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Papa (Tubérculo) -->
+                <div class="fruit-card bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition" data-fruit="papa" data-type="alquenos">
+                    <div onclick="toggleAccordion('acc-alquenos-papa')" class="p-5 flex items-center justify-between cursor-pointer bg-slate-50/80 hover:bg-amber-50/60 transition">
+                        <div class="flex items-center gap-4">
+                            <span class="text-4xl">🥔</span>
+                            <div>
+                                <h4 class="font-display font-bold text-lg text-slate-800">Papa (Alquenos Lineales)</h4>
+                                <span class="text-xs px-2.5 py-0.5 rounded-full bg-stone-200 text-stone-800 font-bold">Compuestos Volátiles</span>
+                            </div>
+                        </div>
+                        <i id="icon-acc-alquenos-papa" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </div>
+                    <div id="acc-alquenos-papa" class="accordion-content">
+                        <div class="p-6 border-t border-stone-100 space-y-4 bg-white text-sm">
+                            <p class="text-slate-700 leading-relaxed">
+                                En la piel de la papa se citan alquenos lineales de cadena media y larga como <strong>1-undeceno (C₁₁H₂₂), 1-trideceno (C₁₃H₂₆) y 1-hexadeceno (C₁₆H₃₂)</strong>.
+                            </p>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-amber-900">1-undeceno (C₁₁H₂₂)</div>
+                                    <button onclick="openMoleculeInViewer('uno_undeceno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-amber-900">1-trideceno (C₁₃H₂₆)</div>
+                                    <button onclick="openMoleculeInViewer('uno_trideceno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                                <div class="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                                    <div class="font-bold text-amber-900">1-hexadeceno (C₁₆H₃₂)</div>
+                                    <button onclick="openMoleculeInViewer('uno_hexadeceno')" class="mt-2 text-xs text-amber-700 font-bold hover:underline">Ver Fórmulas y 3D →</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- PESTAÑA 3: VISOR MOLECULAR 3D Y FICHAS NOTACIONALES       -->
+        <!-- ======================================================== -->
+        <section id="content-visor3d" class="space-y-8 hidden">
+
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-stone-200 space-y-6">
+                
+                <div class="flex flex-col lg:flex-row justify-between lg:items-center gap-4 border-b border-stone-100 pb-6">
+                    <div>
+                        <span class="text-xs font-bold text-brand-600 uppercase tracking-wider">Laboratorio Químico 3D</span>
+                        <h2 class="font-display font-extrabold text-2xl md:text-3xl text-slate-800">
+                            Fichas Moleculares con Visor Tridimensional
+                        </h2>
+                        <p class="text-slate-600 text-sm mt-1">
+                            Selecciona cualquier molécula y explora sus 5 formas de representación: Global, Semidesarrollada, Desarrollada, Topológica y Modelo 3D Interactivo.
+                        </p>
+                    </div>
+
+                    <!-- Selector de Frutas para Filtrar -->
+                    <div class="flex flex-wrap gap-2">
+                        <select id="fruitFilter" onchange="filterMoleculesByFruit()" class="bg-stone-100 border border-stone-300 text-slate-700 font-semibold text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="all">Todas las Frutas / Tubérculos</option>
+                            <option value="papaya">Papaya</option>
+                            <option value="pina">Piña</option>
+                            <option value="banana">Banana</option>
+                            <option value="naranja">Naranja</option>
+                            <option value="papa">Papa (Tubérculo)</option>
+                            <option value="mango">Mango</option>
+                            <option value="manzana">Manzana</option>
+                        </select>
+
+                        <select id="moleculeSelect" onchange="loadSelectedMolecule()" class="bg-brand-600 text-white font-bold text-xs rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400">
+                            <!-- Inyectado por JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Visor 3D y Panel Notacional Principal -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                    <!-- Renderizador 3D Canvas (5 cols) -->
+                    <div class="lg:col-span-5 bg-stone-900 rounded-2xl p-4 flex flex-col justify-between relative shadow-inner min-h-[360px]">
+                        <div class="flex justify-between items-center text-xs text-stone-300 z-10 bg-stone-800/80 px-3 py-1.5 rounded-lg border border-stone-700">
+                            <span class="font-bold flex items-center gap-1.5">
+                                <i class="fa-solid fa-cube text-emerald-400"></i> Modelo 3D Interactivo
+                            </span>
+                            <span class="text-[10px] text-stone-400">Arrastra para rotar · Rueda para zoom</span>
+                        </div>
+
+                        <!-- Canvas ThreeJS -->
+                        <div id="canvas3dContainer" class="w-full h-72 relative my-auto">
+                            <!-- ThreeJS renderiza aquí -->
+                        </div>
+
+                        <div class="text-center text-[11px] text-stone-400 z-10 flex justify-center gap-4">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-slate-700 inline-block border border-white"></span> Carbono (C)</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-stone-200 inline-block"></span> Hidrógeno (H)</span>
+                        </div>
+                    </div>
+
+                    <!-- Pestañas de Representación 2D / Notación (7 cols) -->
+                    <div class="lg:col-span-7 flex flex-col justify-between space-y-4">
+                        
+                        <!-- Header de la Molécula Seleccionada -->
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span id="viewMolType" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase bg-brand-100 text-brand-800">Alcano</span>
+                                <span id="viewMolFruit" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase bg-stone-200 text-slate-700">Papaya</span>
+                            </div>
+                            <h3 id="viewMolName" class="font-display font-extrabold text-2xl text-slate-800 mt-1">Octano</h3>
+                            <p id="viewMolDesc" class="text-xs text-slate-600 mt-0.5">Alcano lineal volátil reportado en extractos de papaya.</p>
+                        </div>
+
+                        <!-- Selector de Vista de Notación -->
+                        <div class="flex flex-wrap gap-1.5 border-b border-stone-200 pb-2">
+                            <button onclick="setMolViewMode('global')" id="btn-mode-global" class="mol-view-btn active text-xs font-bold px-3 py-1.5 rounded-lg border border-stone-200 transition">F. Global</button>
+                            <button onclick="setMolViewMode('semi')" id="btn-mode-semi" class="mol-view-btn text-xs font-bold px-3 py-1.5 rounded-lg border border-stone-200 transition">Semidesarrollada</button>
+                            <button onclick="setMolViewMode('dev')" id="btn-mode-dev" class="mol-view-btn text-xs font-bold px-3 py-1.5 rounded-lg border border-stone-200 transition">Desarrollada</button>
+                            <button onclick="setMolViewMode('topo')" id="btn-mode-topo" class="mol-view-btn text-xs font-bold px-3 py-1.5 rounded-lg border border-stone-200 transition">Topológica</button>
+                        </div>
+
+                        <!-- Panel de Salida de Notación -->
+                        <div class="bg-stone-50 border border-stone-200 p-5 rounded-2xl min-h-[160px] flex flex-col justify-center">
+                            <div id="molNotationTitle" class="text-xs font-bold text-slate-500 uppercase mb-1">Fórmula Global o Molecular</div>
+                            <div id="molNotationDisplay" class="chem-font text-lg md:text-xl font-bold text-slate-900 overflow-x-auto whitespace-pre py-2">
+                                C₈H₁₈
+                            </div>
+                            <div id="molNotationExplanation" class="text-xs text-slate-600 border-t border-stone-200 pt-2 mt-2">
+                                La fórmula global indica el número total de átomos de Carbono e Hidrógeno.
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- SECCIÓN DE APRENDIZAJE PEDAGÓGICO Y CUESTIONARIO         -->
+        <!-- ======================================================== -->
+        <section class="space-y-8 border-t border-stone-200 pt-10">
+
+            <!-- ¿Qué función cumplen estos compuestos? -->
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-stone-200">
+                <h3 class="font-display font-extrabold text-2xl text-slate-800 mb-6 flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-brand-600"></i>
+                    ¿Qué función cumplen estos compuestos en la naturaleza y la industria?
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                    <!-- 1. Maduración -->
+                    <div class="p-5 bg-emerald-50/60 rounded-2xl border border-emerald-200 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-lg font-bold mb-3">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </div>
+                            <h4 class="font-display font-bold text-base text-brand-950">1. Maduración</h4>
+                            <p class="text-xs text-slate-700 mt-1 leading-relaxed">
+                                El <strong>etileno (eteno)</strong> actúa como una señal hormonal gaseosa que coordina la maduración, suavizando los tejidos y transformando almidones en azúcares.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 2. Aroma -->
+                    <div class="p-5 bg-amber-50/60 rounded-2xl border border-amber-200 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center text-lg font-bold mb-3">
+                                <i class="fa-solid fa-wind"></i>
+                            </div>
+                            <h4 class="font-display font-bold text-base text-amber-950">2. Aroma y Sabor</h4>
+                            <p class="text-xs text-slate-700 mt-1 leading-relaxed">
+                                Los <strong>terpenos volátiles</strong> (limoneno, mirceno, pineno) otorgan el olor característico a las frutas y atraen o repelen organismos.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 3. Protección -->
+                    <div class="p-5 bg-blue-50/60 rounded-2xl border border-blue-200 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-lg font-bold mb-3">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <h4 class="font-display font-bold text-base text-blue-950">3. Protección Cuticular</h4>
+                            <p class="text-xs text-slate-700 mt-1 leading-relaxed">
+                                Las ceras contienen <strong>alcanos de cadena larga</strong> ($C_{25}-C_{31}$) que constituyen una barrera hidrofóbica e impiden la deshidratación.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- 4. Conexión con bioplásticos -->
+                    <div class="p-5 bg-purple-50/60 rounded-2xl border border-purple-200 flex flex-col justify-between space-y-3">
+                        <div>
+                            <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center text-lg font-bold mb-3">
+                                <i class="fa-solid fa-flask text-white"></i>
+                            </div>
+                            <h4 class="font-display font-bold text-base text-purple-950">4. Conexión Bioplásticos</h4>
+                            <p class="text-xs text-slate-700 mt-1 leading-relaxed">
+                                Conocer estos compuestos revela la riqueza química de la cáscara. Sin embargo, no forman la matriz estructural del bioplástico (formada por almidón o gelatina).
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Reto del Investigador (Cuestionario Interactivo) -->
+            <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-brand-950 text-white rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+                <div class="flex items-center gap-3">
+                    <div class="p-3 bg-brand-500 text-white rounded-2xl text-xl font-bold">
+                        <i class="fa-solid fa-clipboard-question"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-extrabold text-2xl text-white">Tu Reto como Investigador/a</h3>
+                        <p class="text-xs text-stone-300">Responde las preguntas y comprueba tus conocimientos en tiempo real.</p>
+                    </div>
+                </div>
+
+                <form id="quizForm" class="space-y-6 text-sm">
+
+                    <!-- Pregunta 1 -->
+                    <div class="bg-white/5 p-5 rounded-2xl border border-white/10 space-y-3">
+                        <p class="font-semibold text-brand-200">1. ¿Qué diferencia estructural hay entre un alcano y un alqueno?</p>
+                        <div class="space-y-2 text-xs text-stone-200">
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                                <input type="radio" name="q1" value="A" class="accent-brand-500">
+                                <span>A) El alqueno tiene al menos un doble enlace C=C.</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                                <input type="radio" name="q1" value="B" class="accent-brand-500">
+                                <span>B) El alcano siempre tiene un anillo cíclico.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Pregunta 2 -->
+                    <div class="bg-white/5 p-5 rounded-2xl border border-white/10 space-y-3">
+                        <p class="font-semibold text-brand-200">2. ¿Qué compuesto se relaciona directamente con la maduración de las frutas (como la banana)?</p>
+                        <div class="space-y-2 text-xs text-stone-200">
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                                <input type="radio" name="q2" value="A" class="accent-brand-500">
+                                <span>A) Eteno (etileno).</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                                <input type="radio" name="q2" value="B" class="accent-brand-500">
+                                <span>B) Hexadecano.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Pregunta 3 -->
+                    <div class="bg-white/5 p-5 rounded-2xl border border-white/10 space-y-3">
+                        <p class="font-semibold text-brand-200">3. ¿Qué afirmación sobre el limoneno es correcta?</p>
+                        <div class="space-y-2 text-xs text-stone-200">
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                                <input type="radio" name="q3" value="A" class="accent-brand-500">
+                                <span>A) Es un alcano lineal saturado.</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                                <input type="radio" name="q3" value="B" class="accent-brand-500">
+                                <span>B) Es un terpeno cíclico insaturado.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Pregunta 4 -->
+                    <div class="bg-white/5 p-5 rounded-2xl border border-white/10 space-y-3">
+                        <p class="font-semibold text-brand-200">4. ¿Por qué puede variar la composición química reportada en las cáscaras?</p>
+                        <div class="space-y-2 text-xs text-stone-200">
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                                <input type="radio" name="q4" value="A" class="accent-brand-500">
+                                <span>A) Por la variedad, grado de madurez, parte analizada y método de extracción.</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
+                                <input type="radio" name="q4" value="B" class="accent-brand-500">
+                                <span>B) Porque absolutamente todas las muestras frutales tienen composición idéntica.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                        <button type="button" onclick="checkQuizAnswers()" class="w-full sm:w-auto px-6 py-3 bg-brand-500 hover:bg-brand-400 text-slate-950 font-extrabold rounded-xl transition shadow-lg text-sm">
+                            <i class="fa-solid fa-check-double mr-1"></i> Revisar mis respuestas
+                        </button>
+                        <div id="quizResult" class="text-sm font-bold text-citrus-400"></div>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Fuentes de Consulta y Precisión Científica -->
+            <div class="bg-stone-200/60 rounded-3xl p-6 border border-stone-300 text-xs text-slate-700 space-y-3">
+                <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-book-bookmark text-brand-700"></i>
+                    Fuentes de Consulta y Precisión Científica
+                </h4>
+                <p>
+                    La información de las cáscaras se organiza a partir de los perfiles analíticos cromatográficos (GC-MS) recopilados. Artículos de respaldo verificables:
+                </p>
+                <ul class="list-disc list-inside space-y-1 font-mono text-[11px] text-slate-600">
+                    <li>Mango by-products as a natural source of valuable odor-active compounds</li>
+                    <li>Volatile components from mango cultivars (variación terpénica)</li>
+                    <li>Citrus peel waste essential oil: Chemical composition and GC-MS profiling</li>
+                    <li>Gas chromatography-mass spectrometry of cuticular wax alkanes</li>
+                </ul>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 text-stone-400 py-8 border-t border-slate-900 text-center text-xs space-y-2">
+        <p class="font-bold text-white">Exploradores del Carbono · Material de Apoyo Pedagógico Didáctico</p>
+        <p>Diseñado para interacción con Smartphones e Inteligencia Artificial en el Aula</p>
+    </footer>
+
+    <!-- LÓGICA COMPLETA DE BASE DE DATOS Y TRES.JS -->
+    <script>
+        // BASE DE DATOS COMPLETA DE TODAS LAS MOLÉCULAS CON SUS 5 REPRESENTACIONES
+        const moleculesData = {
+            octano: {
+                name: "Octano",
+                type: "Alcano Lineal",
+                fruit: "papaya",
+                fruitLabel: "Papaya",
+                global: "C₈H₁₈",
+                semi: "CH₃–(CH₂)₆–CH₃",
+                dev: `  H   H   H   H   H   H   H   H
+  |   |   |   |   |   |   |   |
+H-C - C - C - C - C - C - C - C-H
+  |   |   |   |   |   |   |   |
+  H   H   H   H   H   H   H   H`,
+                topo: " /\/\\/\/\\ ",
+                desc: "Alcano lineal de 8 carbonos reportado en compuestos volátiles de papaya.",
+                numC: 8, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            decano: {
+                name: "Decano",
+                type: "Alcano Lineal",
+                fruit: "papaya",
+                fruitLabel: "Papaya",
+                global: "C₁₀H₂₂",
+                semi: "CH₃–(CH₂)₈–CH₃",
+                dev: `H-(CH2)10-H (Cadena lineal continua de 10 carbonos saturados)`,
+                topo: " /\/\\/\/\/\ ",
+                desc: "Alcano lineal de 10 carbonos aislado en perfiles de papaya.",
+                numC: 10, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            undecano: {
+                name: "Undecano",
+                type: "Alcano Lineal",
+                fruit: "papaya",
+                fruitLabel: "Papaya",
+                global: "C₁₁H₂₄",
+                semi: "CH₃–(CH₂)₉–CH₃",
+                dev: `H-(CH2)11-H (Cadena lineal continua de 11 carbonos)`,
+                topo: " /\/\\/\/\/\/ ",
+                desc: "Alcano de 11 carbonos presente en perfiles volátiles.",
+                numC: 11, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            hexadecano: {
+                name: "Hexadecano",
+                type: "Alcano Lineal",
+                fruit: "papaya",
+                fruitLabel: "Papaya / Papa",
+                global: "C₁₆H₃₄",
+                semi: "CH₃–(CH₂)₁₄–CH₃",
+                dev: `CH3-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH3`,
+                topo: " /\/\\/\/\/\/\/\/\/\ ",
+                desc: "Alcano de 16 carbonos presente en papaya y piel de papa.",
+                numC: 16, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            "4_5_dimetiloctano": {
+                name: "4,5-dimetiloctano",
+                type: "Alcano Ramificado",
+                fruit: "papaya",
+                fruitLabel: "Papaya",
+                global: "C₁₀H₂₂",
+                semi: "CH₃–CH₂–CH₂–CH(CH₃)–CH(CH₃)–CH₂–CH₂–CH₃",
+                dev: `       CH3  CH3
+        |    |
+CH3-CH2-CH2-CH - CH -CH2-CH2-CH3`,
+                topo: " /\/\(CH3)\/(CH3)\/\ ",
+                desc: "Alcano ramificado con dos grupos metilo en posiciones 4 y 5.",
+                numC: 10, isAlkene: false, isCyclic: false, isBranched: true
+            },
+            "4_7_dimetilundecano": {
+                name: "4,7-dimetilundecano",
+                type: "Alcano Ramificado",
+                fruit: "papaya",
+                fruitLabel: "Papaya",
+                global: "C₁₃H₂₈",
+                semi: "CH₃–CH₂–CH₂–CH(CH₃)–CH₂–CH₂–CH(CH₃)–CH₂–CH₂–CH₂–CH₃",
+                dev: `       CH3          CH3
+        |            |
+CH3-CH2-CH2-CH-CH2-CH2-CH-CH2-CH2-CH2-CH3`,
+                topo: "Cadena de 11 carbonos con metilos en pos 4 y 7",
+                desc: "Alcano ramificado de 13 carbonos totales.",
+                numC: 13, isAlkene: false, isCyclic: false, isBranched: true
+            },
+            "4_metiloctano": {
+                name: "4-metiloctano",
+                type: "Alcano Ramificado",
+                fruit: "pina",
+                fruitLabel: "Piña",
+                global: "C₉H₂₀",
+                semi: "CH₃–CH₂–CH₂–CH(CH₃)–CH₂–CH₂–CH₂–CH₃",
+                dev: `       CH3
+        |
+CH3-CH2-CH2-CH-CH2-CH2-CH2-CH3`,
+                topo: " /\/\(CH3)\/\/\ ",
+                desc: "Alcano ramificado reportado en extractos de piña.",
+                numC: 9, isAlkene: false, isCyclic: false, isBranched: true
+            },
+            nonano: {
+                name: "Nonano",
+                type: "Alcano Lineal",
+                fruit: "pina",
+                fruitLabel: "Piña",
+                global: "C₉H₂₀",
+                semi: "CH₃–(CH₂)₇–CH₃",
+                dev: `CH3-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH3`,
+                topo: " /\/\\/\/\/ ",
+                desc: "Alcano lineal de 9 carbonos.",
+                numC: 9, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            hexacosano: {
+                name: "Hexacosano",
+                type: "Alcano Lineal",
+                fruit: "pina",
+                fruitLabel: "Piña",
+                global: "C₂₆H₅₄",
+                semi: "CH₃–(CH₂)₂₄–CH₃",
+                dev: `CH3-(CH2)24-CH3 (Cadena continua de 26 carbonos)`,
+                topo: "Zig-zag de 26 vértices/extremos",
+                desc: "Alcano de cadena muy larga en residuos de piña.",
+                numC: 26, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            n_pentacosano: {
+                name: "n-pentacosano",
+                type: "Alcano Cuticular",
+                fruit: "banana",
+                fruitLabel: "Banana",
+                global: "C₂₅H₅₂",
+                semi: "CH₃–(CH₂)₂₃–CH₃",
+                dev: `CH3-(CH2)23-CH3`,
+                topo: "Zig-zag continuo de 25 carbonos",
+                desc: "Cera cuticular impermeable protectora del plátano.",
+                numC: 25, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            heptacosano: {
+                name: "Heptacosano",
+                type: "Alcano Cuticular",
+                fruit: "naranja",
+                fruitLabel: "Naranja",
+                global: "C₂₇H₅₆",
+                semi: "CH₃–(CH₂)₂₅–CH₃",
+                dev: `CH3-(CH2)25-CH3`,
+                topo: "Zig-zag continuo de 27 carbonos",
+                desc: "Alcano presente en las ceras de cáscaras de naranja.",
+                numC: 27, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            nonacosano: {
+                name: "Nonacosano",
+                type: "Alcano Cuticular",
+                fruit: "naranja",
+                fruitLabel: "Naranja / Manzana",
+                global: "C₂₉H₆₀",
+                semi: "CH₃–(CH₂)₂₇–CH₃",
+                dev: `CH3-(CH2)27-CH3`,
+                topo: "Zig-zag de 29 carbonos",
+                desc: "Alcano de alto peso molecular que aporta firmeza a la cera de la piel.",
+                numC: 29, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            octadecano: {
+                name: "Octadecano",
+                type: "Alcano Lineal",
+                fruit: "papa",
+                fruitLabel: "Papa (Tubérculo)",
+                global: "C₁₈H₃₈",
+                semi: "CH₃–(CH₂)₁₆–CH₃",
+                dev: `CH3-(CH2)16-CH3`,
+                topo: "Zig-zag de 18 carbonos",
+                desc: "Reportado en la peridermis/piel de tubérculos de papa.",
+                numC: 18, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            tetracosano: {
+                name: "Tetracosano",
+                type: "Alcano Lineal",
+                fruit: "papa",
+                fruitLabel: "Papa (Tubérculo)",
+                global: "C₂₄H₅₀",
+                semi: "CH₃–(CH₂)₂₂–CH₃",
+                dev: `CH3-(CH2)22-CH3`,
+                topo: "Zig-zag de 24 carbonos",
+                desc: "Alcano sólido a temperatura ambiente presente en la piel de papa.",
+                numC: 24, isAlkene: false, isCyclic: false, isBranched: false
+            },
+            eteno: {
+                name: "Eteno (Etileno)",
+                type: "Alqueno Acíclico Sencillo",
+                fruit: "banana",
+                fruitLabel: "Banana / Frutas",
+                global: "C₂H₄",
+                semi: "CH₂ = CH₂",
+                dev: `  H     H
+   \\   /
+    C = C
+   /   \\
+  H     H`,
+                topo: " =  (Dos líneas paralelas horizontales)",
+                desc: "Fitohormona gaseosa vegetal reguladora clave de la maduración.",
+                numC: 2, isAlkene: true, isCyclic: false, isBranched: false
+            },
+            limoneno: {
+                name: "D-Limoneno",
+                type: "Terpeno Cíclico",
+                fruit: "naranja",
+                fruitLabel: "Naranja / Piña",
+                global: "C₁₀H₁₆",
+                semi: "1-metil-4-(prop-1-en-2-il)ciclohex-1-eno",
+                dev: `    CH3
+     |
+   /C = CH\\
+  /        \\
+CH2        CH - C(CH3) = CH2
+  \\        /
+   \\CH2-CH2/`,
+                topo: "Anillo de ciclohexeno + sustituyente isopropenilo",
+                desc: "Terpeno monocíclico abundante en el aceite de cáscara cítrica.",
+                numC: 10, isAlkene: true, isCyclic: true, isBranched: true
+            },
+            alpha_pineno: {
+                name: "α-Pineno",
+                type: "Terpeno Bicíclico",
+                fruit: "naranja",
+                fruitLabel: "Naranja / Mango",
+                global: "C₁₀H₁₆",
+                semi: "Terpeno bicíclico insaturado",
+                dev: `Estructura bicíclica rígida con 1 doble enlace C=C endocíclico.`,
+                topo: "Dos anillos fusionados (ciclobutano + ciclohexeno)",
+                desc: "Aporta notas herbales y frescas a la cáscara de mango y cítricos.",
+                numC: 10, isAlkene: true, isCyclic: true, isBranched: true
+            },
+            beta_mirceno: {
+                name: "β-Mirceno",
+                type: "Terpeno Acíclico Ramificado",
+                fruit: "mango",
+                fruitLabel: "Mango / Naranja / Papaya",
+                global: "C₁₀H₁₆",
+                semi: "CH₂=CH–C(=CH₂)–CH₂–CH₂–CH=C(CH₃)₂",
+                dev: `CH2 = C - CH = CH2
+      |
+      CH2 - CH2 - CH = C(CH3)2`,
+                topo: "Cadena abierta con 3 dobles enlaces C=C",
+                desc: "Trieno acíclico aromático característico de mangos.",
+                numC: 10, isAlkene: true, isCyclic: false, isBranched: true
+            },
+            tres_careno: {
+                name: "3-Careno",
+                type: "Terpeno Bicíclico",
+                fruit: "mango",
+                fruitLabel: "Mango / Papaya",
+                global: "C₁₀H₁₆",
+                semi: "Terpeno bicíclico con anillo de ciclopropano fusionado",
+                dev: `Anillo de ciclohexeno con puente de ciclopropano en C3-C4.`,
+                topo: "Biciclo [4.1.0] hepteno con sustituyentes metilo",
+                desc: "Componente volátil aromático de cáscaras de mango.",
+                numC: 10, isAlkene: true, isCyclic: true, isBranched: true
+            },
+            alpha_farneseno: {
+                name: "α-Farneseno",
+                type: "Sesquiterpeno Acíclico",
+                fruit: "manzana",
+                fruitLabel: "Manzana",
+                global: "C₁₅H₂₄",
+                semi: "3,7,11-trimetildodeca-1,3,6,10-tetraeno",
+                dev: `Cadena de 12 carbonos con 4 dobles enlaces C=C y 3 metilos`,
+                topo: "Zig-zag de 12 carbonos con 4 dobles enlaces y ramificaciones",
+                desc: "Sesquiterpeno responsable de aromas y manchas cuticulares en manzana.",
+                numC: 15, isAlkene: true, isCyclic: false, isBranched: true
+            },
+            uno_trideceno: {
+                name: "1-Trideceno",
+                type: "Alqueno Lineal",
+                fruit: "papa",
+                fruitLabel: "Papa / Piña",
+                global: "C₁₃H₂₆",
+                semi: "CH₂=CH–(CH₂)₁₀–CH₃",
+                dev: `CH2=CH-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH3`,
+                topo: " =/\\/\\/\\/\\/\\ ",
+                desc: "Alqueno terminal de 13 carbonos.",
+                numC: 13, isAlkene: true, isCyclic: false, isBranched: false
+            },
+            uno_undeceno: {
+                name: "1-Undeceno",
+                type: "Alqueno Lineal",
+                fruit: "papa",
+                fruitLabel: "Papa (Tubérculo)",
+                global: "C₁₁H₂₂",
+                semi: "CH₂=CH–(CH₂)₈–CH₃",
+                dev: `CH2=CH-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH2-CH3`,
+                topo: " =/\\/\\/\\/\\ ",
+                desc: "Alqueno terminal de 11 carbonos en piel de papa.",
+                numC: 11, isAlkene: true, isCyclic: false, isBranched: false
+            },
+            uno_hexadeceno: {
+                name: "1-Hexadeceno",
+                type: "Alqueno Lineal",
+                fruit: "papa",
+                fruitLabel: "Papa (Tubérculo)",
+                global: "C₁₆H₃₂",
+                semi: "CH₂=CH–(CH₂)₁₃–CH₃",
+                dev: `CH2=CH-(CH2)13-CH3`,
+                topo: " =/\\/\\/\\/\\/\\/\\/\\ ",
+                desc: "Alqueno insaturado de 16 carbonos.",
+                numC: 16, isAlkene: true, isCyclic: false, isBranched: false
+            }
+        };
+
+        // VARIABLES DE TRES.JS GLOBAL
+        let scene, camera, renderer, controls, currentMolGroup;
+        let currentSelectedMolKey = 'octano';
+        let currentMolViewMode = 'global';
+
+        // CARGA Y CAMBIO DE PESTAÑAS
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('content-alcanos').classList.add('hidden');
+            document.getElementById('content-alquenos').classList.add('hidden');
+            document.getElementById('content-visor3d').classList.add('hidden');
+
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+
+            if (tab === 'visor3d') {
+                setTimeout(() => {
+                    if (!renderer) initThreeJS();
+                    renderMolecule3D(currentSelectedMolKey);
+                }, 100);
+            }
+        }
+
+        function toggleAccordion(id) {
+            const content = document.getElementById(id);
+            const icon = document.getElementById(`icon-${id}`);
+            if (content.classList.contains('open')) {
+                content.classList.remove('open');
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.classList.add('open');
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // LLENAR SELECTOR DE MOLÉCULAS
+        function populateMoleculeSelect(filterFruit = 'all') {
+            const select = document.getElementById('moleculeSelect');
+            select.innerHTML = '';
+
+            for (const key in moleculesData) {
+                const mol = moleculesData[key];
+                if (filterFruit === 'all' || mol.fruit === filterFruit) {
+                    const opt = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = `${mol.name} (${mol.global})`;
+                    select.appendChild(opt);
+                }
+            }
+        }
+
+        function filterMoleculesByFruit() {
+            const fruit = document.getElementById('fruitFilter').value;
+            populateMoleculeSelect(fruit);
+            loadSelectedMolecule();
+        }
+
+        function openMoleculeInViewer(molKey) {
+            switchTab('visor3d');
+            currentSelectedMolKey = molKey;
+            document.getElementById('moleculeSelect').value = molKey;
+            loadSelectedMolecule();
+        }
+
+        function loadSelectedMolecule() {
+            currentSelectedMolKey = document.getElementById('moleculeSelect').value;
+            const mol = moleculesData[currentSelectedMolKey];
+            if (!mol) return;
+
+            document.getElementById('viewMolName').textContent = mol.name;
+            document.getElementById('viewMolType').textContent = mol.type;
+            document.getElementById('viewMolFruit').textContent = mol.fruitLabel;
+            document.getElementById('viewMolDesc').textContent = mol.desc;
+
+            updateNotationPanel();
+            if (renderer) renderMolecule3D(currentSelectedMolKey);
+        }
+
+        function setMolViewMode(mode) {
+            currentMolViewMode = mode;
+            document.querySelectorAll('.mol-view-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-mode-${mode}`).classList.add('active');
+            updateNotationPanel();
+        }
+
+        function updateNotationPanel() {
+            const mol = moleculesData[currentSelectedMolKey];
+            const titleEl = document.getElementById('molNotationTitle');
+            const displayEl = document.getElementById('molNotationDisplay');
+            const expEl = document.getElementById('molNotationExplanation');
+
+            if (currentMolViewMode === 'global') {
+                titleEl.textContent = '1. Fórmula Global o Molecular';
+                displayEl.textContent = mol.global;
+                expEl.textContent = 'Expresa la cantidad total exacta de átomos de Carbono e Hidrógeno en la molécula.';
+            } else if (currentMolViewMode === 'semi') {
+                titleEl.textContent = '2. Fórmula Semidesarrollada';
+                displayEl.textContent = mol.semi;
+                expEl.textContent = 'Muestra los enlaces entre carbonos principales omitiendo los enlaces C-H individuales.';
+            } else if (currentMolViewMode === 'dev') {
+                titleEl.textContent = '3. Representación Desarrollada / Estructural';
+                displayEl.textContent = mol.dev;
+                expEl.textContent = 'Dibuja todos los enlaces covalentes explícitos de Carbono-Carbono y Carbono-Hidrógeno.';
+            } else if (currentMolViewMode === 'topo') {
+                titleEl.textContent = '4. Estructura Topológica (Líneo-Skeletal)';
+                displayEl.textContent = mol.topo;
+                expEl.textContent = 'Omite las letras C y H. Cada vértice y extremo representa un átomo de carbono saturado.';
+            }
+        }
+
+        // INITIALIZE THREE.JS 3D CANVAS
+        function initThreeJS() {
+            const container = document.getElementById('canvas3dContainer');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1c1917);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 0, 15);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Luces
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 15, 10);
+            scene.add(dirLight);
+
+            animateThreeJS();
+        }
+
+        function animateThreeJS() {
+            requestAnimationFrame(animateThreeJS);
+            if (controls) controls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        // GENERADOR DE MOLÉCULAS EN 3D CON SPHERES & CYLINDERS
+        function renderMolecule3D(key) {
+            const mol = moleculesData[key];
+            if (!mol || !scene) return;
+
+            if (currentMolGroup) scene.remove(currentMolGroup);
+            currentMolGroup = new THREE.Group();
+
+            const cMat = new THREE.MeshPhongMaterial({ color: 0x334155, shininess: 80 }); // Carbon: Dark Grey
+            const hMat = new THREE.MeshPhongMaterial({ color: 0xf8fafc, shininess: 60 }); // Hydrogen: White
+            const doubleBondMat = new THREE.MeshPhongMaterial({ color: 0xeab308 });       // Double Bond: Yellow
+
+            const cGeo = new THREE.SphereGeometry(0.5, 32, 32);
+            const hGeo = new THREE.SphereGeometry(0.25, 24, 24);
+
+            const numC = Math.min(mol.numC, 12); // Limitar visualización para rendimiento en móvil
+            const stepX = 1.1;
+
+            if (mol.isCyclic) {
+                // Dibujar Anillo 3D (Ciclohexeno)
+                const radius = 2.2;
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius;
+
+                    const cSphere = new THREE.Mesh(cGeo, cMat);
+                    cSphere.position.set(x, y, 0);
+                    currentMolGroup.add(cSphere);
+
+                    // Hidrógenos exteriores
+                    const hSphere = new THREE.Mesh(hGeo, hMat);
+                    hSphere.position.set(x * 1.4, y * 1.4, 0.4);
+                    currentMolGroup.add(hSphere);
+                }
+            } else {
+                // Dibujar Cadena Zig-Zag 3D
+                for (let i = 0; i < numC; i++) {
+                    const x = (i - numC / 2) * stepX;
+                    const y = (i % 2 === 0 ? 0.4 : -0.4);
+                    const z = (mol.isBranched && i === 3 ? 1.2 : 0);
+
+                    const cSphere = new THREE.Mesh(cGeo, mol.isAlkene && i < 2 ? doubleBondMat : cMat);
+                    cSphere.position.set(x, y, z);
+                    currentMolGroup.add(cSphere);
+
+                    // Hidrógenos
+                    const h1 = new THREE.Mesh(hGeo, hMat);
+                    h1.position.set(x, y + 0.8, 0.5);
+                    currentMolGroup.add(h1);
+
+                    const h2 = new THREE.Mesh(hGeo, hMat);
+                    h2.position.set(x, y - 0.8, -0.5);
+                    currentMolGroup.add(h2);
+                }
+            }
+
+            scene.add(currentMolGroup);
+        }
+
+        // RESPUESTAS Y CUESTIONARIO
+        function checkQuizAnswers() {
+            const q1 = document.querySelector('input[name="q1"]:checked')?.value;
+            const q2 = document.querySelector('input[name="q2"]:checked')?.value;
+            const q3 = document.querySelector('input[name="q3"]:checked')?.value;
+            const q4 = document.querySelector('input[name="q4"]:checked')?.value;
+
+            let score = 0;
+            if (q1 === 'A') score++;
+            if (q2 === 'A') score++;
+            if (q3 === 'B') score++;
+            if (q4 === 'A') score++;
+
+            const resultDiv = document.getElementById('quizResult');
+            if (score === 4) {
+                resultDiv.className = 'text-sm font-bold text-emerald-400 bg-emerald-950/60 p-3 rounded-xl border border-emerald-500';
+                resultDiv.innerHTML = '<i class="fa-solid fa-trophy text-amber-400 mr-1"></i> ¡Excelente! 4/4 correctas. ¡Eres un Explorador del Carbono Pro!';
+            } else {
+                resultDiv.className = 'text-sm font-bold text-amber-300 bg-amber-950/60 p-3 rounded-xl border border-amber-500';
+                resultDiv.textContent = `Obtuviste ${score} de 4 correctas. Revisa las fichas y vuelve a intentarlo.`;
+            }
+        }
+
+        // FILTRADO GLOBAL DE BUSCADOR
+        function filterAll() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            document.querySelectorAll('.fruit-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(q) ? 'block' : 'none';
+            });
+        }
+
+        // EVENTOS INICIALES AL CARGAR
+        window.onload = function() {
+            populateMoleculeSelect('all');
+            loadSelectedMolecule();
+        };
+
+        window.onresize = function() {
+            if (renderer && camera) {
+                const container = document.getElementById('canvas3dContainer');
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+        };
+    </script>
+</body>
+</html>
